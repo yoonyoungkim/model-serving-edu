@@ -45,16 +45,16 @@ services:
     volumes:
       - ./notebooks:/tf   #shared volumes
 
-  flask:    # flask server for covid19 service web pages and APIs, with backend tensorflow servering
-    build:
-      context: ./covid19
-    image: ai-service-flask:0.1.0
-    hostname: flask
-    restart: on-failure
-    ports:
-      - 8051-8053:5000 # tensorflow servring port
-    volumes:
-      - ./covid19:/app  # tf2 serving convention
+#  flask:    # flask server for covid19 service web pages and APIs, with backend tensorflow servering
+#    build:
+#      context: ./covid19
+#    image: ai-service-flask:0.1.0
+#    hostname: flask
+#    restart: on-failure
+#    ports:
+#      - 8051-8053:5000 # tensorflow servring port
+#    volumes:
+#      - ./covid19:/app  # tf2 serving convention
 
   fastapi:    # FastAPI with Uvicorn server for covid19 service web pages and APIs, with backend tensorflow servering
     build:
@@ -75,7 +75,7 @@ services:
     #  - ./haproxy:/haproxy-override
     links:
       - fastapi
-      - flask
+#      - flask
     ports:
       - 8088:8088
     expose:
