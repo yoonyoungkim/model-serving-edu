@@ -38,7 +38,7 @@ def test_rx_image_for_Covid19(model, imagePath, filename):
     img = cv2.imread(imagePath)
     img_out = img
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (256, 256))
+    img = cv2.resize(img, (224, 224))
     img = np.expand_dims(img, axis=0)
 
     img = np.array(img) / 255.0
@@ -61,7 +61,7 @@ def test_rx_image_for_Covid19(model, imagePath, filename):
     cv2.imwrite('static/result/'+img_pred_name, img_out)
     cv2.imwrite('static/Image_Prediction.png', img_out)
     print
-    return prediction, prob
+    return prediction, prob, img_pred_name
 
 
 
@@ -128,7 +128,7 @@ class GradCAM:
 def generate_gradcam_heatmap(model, imagePath, filename):
     orignal = cv2.imread(imagePath)
     orig = cv2.cvtColor(orignal, cv2.COLOR_BGR2RGB)
-    resized = cv2.resize(orig, (256, 256))
+    resized = cv2.resize(orig, (224, 224))
     dataXG = np.array(resized) / 255.0
     dataXG = np.expand_dims(dataXG, axis=0)
 
@@ -228,8 +228,8 @@ def query():
 
             # detection covid
             try:
-                #prediction, prob = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
-                prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
+                prediction, prob, img_pred_name = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
+                #prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
                 output_path = os.path.join(app.config['OUTPUT_FOLDER'], img_pred_name)
                 return render_template('index.html', prediction=prediction, confidence=prob, filename=image_name, xray_image=img_path, xray_image_with_heatmap=output_path)
             except:
@@ -245,7 +245,7 @@ def covid_classifier_model2():
     # Decoding and pre-processing base64 image
     img = imread(BytesIO(base64.b64decode(request.form['b64'])))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (256, 256))
+    img = cv2.resize(img, (224, 224))
     img = image.img_to_array(img) / 255.
     img = np.expand_dims(img, axis=0)
 
@@ -288,7 +288,7 @@ def covid_classifier_model2_heatmap():
     
 
     # normalise it into 4d input per request by backend tf serving
-    img = cv2.resize(img, (256, 256))
+    img = cv2.resize(img, (224, 224))
     img = image.img_to_array(img) / 255.
     img = np.expand_dims(img, axis=0)
 
