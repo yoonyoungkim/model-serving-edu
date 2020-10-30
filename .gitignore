@@ -9,6 +9,8 @@ ModelServing-edu/covid19/covid19_models/2/variables/*
 ModelServing-edu/covid19/models/*
 ModelServing-edu/covid19/scripts/*.h5
 ModelServing-edu/covid19/covid19_models/1/variables/*
+covid19/models/*
+covid19/__pycache__/*
 
 ModelServing-edu/covid-fastapi/static/result/*
 ModelServing-edu/covid-fastapi/static/source/*

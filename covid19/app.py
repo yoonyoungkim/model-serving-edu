@@ -17,6 +17,7 @@ from imageio import imread
 import json
 import time
 import uuid
+import logging
 
 # Web server
 #from gevent.pywsgi import WSGIServer
@@ -41,12 +42,12 @@ def test_rx_image_for_Covid19(model, imagePath, filename):
     img = cv2.resize(img, (224, 224))
     img = np.expand_dims(img, axis=0)
 
-    img = np.array(img) / 255.0
+    img = np.array(img) / 224.0
 
     pred = model.predict(img)
     pred_neg = int(round(pred[0][1]*100))
     pred_pos = int(round(pred[0][0]*100))
-
+    
     if np.argmax(pred, axis=1)[0] == 0:
         prediction = 'Covid-19 POSITIVE'
         prob = pred_pos
@@ -117,7 +118,7 @@ class GradCAM:
         numer = heatmap - np.min(heatmap)
         denom = (heatmap.max() - heatmap.min()) + eps
         heatmap = numer / denom
-        heatmap = (heatmap * 255).astype("uint8")
+        heatmap = (heatmap * 224).astype("uint8")
 
         # return the resulting heatmap to the calling function
         return heatmap
@@ -129,8 +130,8 @@ def generate_gradcam_heatmap(model, imagePath, filename):
     orignal = cv2.imread(imagePath)
     orig = cv2.cvtColor(orignal, cv2.COLOR_BGR2RGB)
     resized = cv2.resize(orig, (224, 224))
-    dataXG = np.array(resized) / 255.0
     dataXG = np.expand_dims(dataXG, axis=0)
+    dataXG = np.array(resized) / 224.0
 
     preds = model.predict(dataXG)
     i = np.argmax(preds[0])
@@ -147,6 +148,8 @@ def generate_gradcam_heatmap(model, imagePath, filename):
     #pred = model.predict(img)
     pred_neg = int(round(preds[0][1]*100))
     pred_pos = int(round(preds[0][0]*100))
+    logging.warning(np.argmax(preds, axis=1)[0])
+    logging.warning(pred_pos)
 
     if (np.argmax(preds, axis=1)[0] == 0) and (pred_pos > 65):
         prediction = 'Covid-19 POSITIVE'
@@ -172,7 +175,6 @@ def generate_gradcam_heatmap(model, imagePath, filename):
     print
     
     return prediction, prob, img_pred_name
-
 
 
 
@@ -246,7 +248,7 @@ def covid_classifier_model2():
     img = imread(BytesIO(base64.b64decode(request.form['b64'])))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = cv2.resize(img, (224, 224))
-    img = image.img_to_array(img) / 255.
+    img = image.img_to_array(img) / 224.
     img = np.expand_dims(img, axis=0)
 
     # this line is added because of a bug in tf_serving(1.10.0-dev)
@@ -289,7 +291,7 @@ def covid_classifier_model2_heatmap():
 
     # normalise it into 4d input per request by backend tf serving
     img = cv2.resize(img, (224, 224))
-    img = image.img_to_array(img) / 255.
+    img = image.img_to_array(img) / 224.
     img = np.expand_dims(img, axis=0)
 
     # this line is added because of a bug in tf_serving(1.10.0-dev)

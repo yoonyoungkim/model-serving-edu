@@ -67,16 +67,16 @@ services:
 #    volumes:
 #      - ./covid-fastapi:/app  # tf2 serving convention
 
-  lb:
-    build:
-      context: ./haproxy
-    image: 'haproxy:0.0.1'
+#  lb:
+#    build:
+#      context: ./haproxy
+#    image: 'haproxy:0.0.1'
     #volumes:
     #  - ./haproxy:/haproxy-override
-    links:
+#    links:
       #- fastapi
-      - flask
-    ports:
-      - 8088:8088
-    expose:
-      - 8088
+#      - flask
+#    ports:
+#      - 8088:8088
+#    expose:
+#      - 8088
