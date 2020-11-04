@@ -1,15 +1,15 @@
 ModelServing-edu/notebooks/notebooks/backup/*
 ModelServing-edu/notebooks/notebooks/Covid_M/*
 
-ModelServing-edu/covid19/static/result/*
-ModelServing-edu/covid19/static/source/*
+#ModelServing-edu/covid19/static/result/*
+#ModelServing-edu/covid19/static/source/*
 ModelServing-edu/covid19/test_images/*
 ModelServing-edu/covid19/flask_server/*
 ModelServing-edu/covid19/covid19_models/2/variables/*
 ModelServing-edu/covid19/models/*
 ModelServing-edu/covid19/scripts/*.h5
 ModelServing-edu/covid19/covid19_models/1/variables/*
-covid19/models/*
+#covid19/models/*
 covid19/__pycache__/*
 
 ModelServing-edu/covid-fastapi/static/result/*
