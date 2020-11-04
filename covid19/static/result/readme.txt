@@ -1,1 +1,1 @@
-output folder
+result
