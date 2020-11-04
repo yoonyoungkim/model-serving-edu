@@ -334,13 +334,13 @@ async def query(request: Request, file: UploadFile = File(...)):
 
         if file and allowed_file(filename):
 
-            #filename = str(file.filename)
+            filename = str(file.filename)
             img_path = os.path.join(UPLOAD_FOLDER, filename)
             image_name = filename
 
             # detection covid
             try:
-                prediction, prob = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
+                prediction, prob, img_pred_name = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
                 #prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
                 output_path = os.path.join(OUTPUT_FOLDER, img_pred_name)
                 #return render_template('index.html', prediction=prediction, confidence=prob, filename=image_name, xray_image=img_path, xray_image_with_heatmap=output_path)
