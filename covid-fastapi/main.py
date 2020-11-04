@@ -19,7 +19,7 @@ import time
 import logging
 import uuid
 
-# Web server 
+# Web server
 #from gevent.pywsgi import WSGIServer
 # Server
 import uvicorn
@@ -85,10 +85,10 @@ def test_rx_image_for_Covid19(model, imagePath, filename):
     img = cv2.imread(imagePath)
     img_out = img
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (256, 256))
+    img = cv2.resize(img, (224, 224))
     img = np.expand_dims(img, axis=0)
 
-    img = np.array(img) / 255.0
+    img = np.array(img) / 224.0
 
     pred = model.predict(img)
     pred_neg = int(round(pred[0][1]*100))
@@ -108,7 +108,7 @@ def test_rx_image_for_Covid19(model, imagePath, filename):
     cv2.imwrite('static/result/'+img_pred_name, img_out)
     cv2.imwrite('static/Image_Prediction.png', img_out)
     print
-    return prediction, prob
+    return prediction, prob, img_pred_name
 
 
 
@@ -160,11 +160,11 @@ class GradCAM:
         (w, h) = (image.shape[2], image.shape[1])
         heatmap = cv2.resize(cam.numpy(), (w, h))
 
-        # normalize the heatmap 
+        # normalize the heatmap
         numer = heatmap - np.min(heatmap)
         denom = (heatmap.max() - heatmap.min()) + eps
         heatmap = numer / denom
-        heatmap = (heatmap * 255).astype("uint8")
+        heatmap = (heatmap * 224).astype("uint8")
 
         # return the resulting heatmap to the calling function
         return heatmap
@@ -175,9 +175,9 @@ class GradCAM:
 def generate_gradcam_heatmap(model, imagePath, filename):
     orignal = cv2.imread(imagePath)
     orig = cv2.cvtColor(orignal, cv2.COLOR_BGR2RGB)
-    resized = cv2.resize(orig, (256, 256))
-    dataXG = np.array(resized) / 255.0
+    resized = cv2.resize(orig, (224, 224))
     dataXG = np.expand_dims(dataXG, axis=0)
+    dataXG = np.array(resized) / 224.0
 
     preds = model.predict(dataXG)
     i = np.argmax(preds[0])
@@ -187,13 +187,15 @@ def generate_gradcam_heatmap(model, imagePath, filename):
 
     # Old fashoined way to overlay a transparent heatmap onto original image, the same as above
     heatmapY = cv2.resize(heatmap, (orig.shape[1], orig.shape[0]))
-    heatmapY = cv2.applyColorMap(heatmapY, cv2.COLORMAP_OCEAN)  # COLORMAP_JET, COLORMAP_VIRIDIS, COLORMAP_HOT, COLORMAP_BONE, COLORMAP_OCEAN 
+    heatmapY = cv2.applyColorMap(heatmapY, cv2.COLORMAP_OCEAN)  # COLORMAP_JET, COLORMAP_VIRIDIS, COLORMAP_HOT, COLORMAP_BONE, COLORMAP_OCEAN
     imageY = cv2.addWeighted(heatmapY, 0.5, orignal, 1.0, 0)
 
 
     #pred = model.predict(img)
     pred_neg = int(round(preds[0][1]*100))
     pred_pos = int(round(preds[0][0]*100))
+    logging.warning(np.argmax(preds, axis=1)[0])
+    logging.warning(pred_pos)
 
     if (np.argmax(preds, axis=1)[0] == 0) and (pred_pos > 65):
         prediction = 'Covid-19 POSITIVE'
@@ -208,8 +210,8 @@ def generate_gradcam_heatmap(model, imagePath, filename):
         file_pred = 'Normal'
         prob = pred_pos
 
-    
-    img_pred_name =  file_pred + '_' + str(prob) + '_' + filename.replace('.', '_') +'.png'    
+
+    img_pred_name =  file_pred + '_' + str(prob) + '_' + filename +'.png'
     if (np.argmax(preds, axis=1)[0] == 0) and (pred_pos > 65):
         cv2.imwrite('static/result/'+img_pred_name, imageY )
     else:
@@ -217,7 +219,7 @@ def generate_gradcam_heatmap(model, imagePath, filename):
 
     cv2.imwrite('static/Image_Prediction.png', orignal )
     print
-    
+
     return prediction, prob, img_pred_name
 
 
@@ -245,7 +247,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
     )
- 
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -309,8 +311,8 @@ async def query(request: Request, file: UploadFile = File(...)):
         #form = await request.form()
         #filename = form["file"].filename
         #contents = await form["file"].read()
-        #file = form["file"].file 
-            
+        #file = form["file"].file
+
         #global upload_folder
         filename = file.filename
         file_object = file.file
@@ -320,16 +322,16 @@ async def query(request: Request, file: UploadFile = File(...)):
         shutil.copyfileobj(file_object, upload_folder)
         upload_folder.close()
         #return {"filename": file.filename}
-        
+
         #if 'file' not in request.files:
         if filename == '' or  file == '':
             return templates.TemplateResponse("index.html", {"request": request, "prediction": "INCONCLUSIVE", "confidence": 0, "filename": "no image"})
-        
+
         # if user does not select file, browser also
         # submit an empty part without filename
         #if filename == '':
         #    return templates.TemplateResponse("index.html", {"request": request, "prediction": "INCONCLUSIVE", "confidence": 0, "filename": "no image"})
-  
+
         if file and allowed_file(filename):
 
             #filename = str(file.filename)
@@ -338,8 +340,8 @@ async def query(request: Request, file: UploadFile = File(...)):
 
             # detection covid
             try:
-                #prediction, prob = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
-                prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
+                prediction, prob = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
+                #prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
                 output_path = os.path.join(OUTPUT_FOLDER, img_pred_name)
                 #return render_template('index.html', prediction=prediction, confidence=prob, filename=image_name, xray_image=img_path, xray_image_with_heatmap=output_path)
                 return templates.TemplateResponse("index.html", {"request": request, "prediction": prediction, "confidence": prob, "filename": image_name, "xray_image": img_path, "xray_image_with_heatmap": output_path })
@@ -347,7 +349,7 @@ async def query(request: Request, file: UploadFile = File(...)):
             except:
                 # return render_template('index.html', prediction='INCONCLUSIVE', confidence=0, filename=image_name, xray_image=img_path)
                 return templates.TemplateResponse("index.html", {"request": request, "prediction": "INCONCLUSIVE -- here?", "confidence": 0, "filename": image_name, "xray_image": img_path })
-                
+
         else:
             #return render_template('index.html', name='FILE NOT ALOWED', confidence=0, filename=image_name, xray_image=img_path)
             return templates.TemplateResponse("index.html", {"request": request, "prediction": "FILE NOT ALOWED", "confidence": 0, "filename": image_name, "xray_image": img_path })
@@ -363,19 +365,19 @@ async def covid_classifier_model2(request: Request):
     form = await request.form()
     img = imread(BytesIO(base64.b64decode(form['b64'])))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (256, 256))
-    img = image.img_to_array(img) / 255.
+    img = cv2.resize(img, (224, 224))
+    img = image.img_to_array(img) / 224.
     img = np.expand_dims(img, axis=0)
 
     # this line is added because of a bug in tf_serving(1.10.0-dev)
     img = img.astype('float16')
 
-    data = json.dumps({"signature_name": "serving_default", 
+    data = json.dumps({"signature_name": "serving_default",
                        "instances": img.tolist()})
-    
+
     #MODEL2_API_URL is tensorflow serving URL in another docker
     HEADERS = {'content-type': 'application/json'}
-    MODEL2_API_URL = 'http://172.17.0.1:8511/v1/models/covid19/versions/2:predict'
+    MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/2:predict'
     CLASS_NAMES = ['Covid19', 'Normal_Lung', 'Pneumonia_Bacterial_Lung']
 
     json_response = requests.post(MODEL2_API_URL, data=data, headers=HEADERS)
@@ -384,10 +386,10 @@ async def covid_classifier_model2(request: Request):
     prediction = CLASS_NAMES[prediction]
     #my_logger.error("Something went wrong here?")
     return JSONResponse({"model_name": "Customised IncpetionV3",
-                    "X-Ray_Classification_Result": prediction, 
+                    "X-Ray_Classification_Result": prediction,
                     'X-Ray_Classfication_Raw_Result': json.loads(json_response.text)['predictions'], #json_response.text,
                     #'Input_Image': 'InputFilename',
-                    #'Output_Heatmap': 'OutputFilenameWithHeatmap' 
+                    #'Output_Heatmap': 'OutputFilenameWithHeatmap'
                     })
 
 # Model 2 inference endpoint with heatmap
@@ -401,22 +403,22 @@ async def covid_classifier_model2_heatmap(request: Request):
     filename = time.strftime( str(uuid.uuid4()) + "%Y%m%d-%H%M%S.png")
     img_path = os.path.join(UPLOAD_FOLDER, filename)
     cv2.imwrite(img_path, img)
-    
+
 
     # normalise it into 4d input per request by backend tf serving
-    img = cv2.resize(img, (256, 256))
-    img = image.img_to_array(img) / 255.
+    img = cv2.resize(img, (224, 224))
+    img = image.img_to_array(img) / 224.
     img = np.expand_dims(img, axis=0)
 
     # this line is added because of a bug in tf_serving(1.10.0-dev)
     img = img.astype('float16')
 
-    data = json.dumps({"signature_name": "serving_default", 
+    data = json.dumps({"signature_name": "serving_default",
                        "instances": img.tolist()})
-    
+
     #MODEL2_API_URL is tensorflow serving URL in another docker
     HEADERS = {'content-type': 'application/json'}
-    MODEL2_API_URL = 'http://172.17.0.1:8511/v1/models/covid19/versions/2:predict'
+    MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/2:predict'
     CLASS_NAMES = ['Covid19', 'Normal_Lung', 'Pneumonia_Bacterial_Lung']
 
     json_response = requests.post(MODEL2_API_URL, data=data, headers=HEADERS)
@@ -432,10 +434,10 @@ async def covid_classifier_model2_heatmap(request: Request):
 
     return JSONResponse({"model_name": "Customised Incpetion V3",
                     "X-Ray_Classification_Result": pred,
-                    "X-Ray_Classification_Covid19_Probability": prob / 100, 
-                    'X-Ray_Classfication_Raw_Result': json.loads(json_response.text)['predictions'], 
+                    "X-Ray_Classification_Covid19_Probability": prob / 100,
+                    'X-Ray_Classfication_Raw_Result': json.loads(json_response.text)['predictions'],
                     'Input_Image': RESOURCE_URL_SOURCE + filename,
-                    'Output_Heatmap': RESOURCE_URL_RESULT + img_pred_name 
+                    'Output_Heatmap': RESOURCE_URL_RESULT + img_pred_name
                     })
 
 
