@@ -1,18 +1,12 @@
 
 1. Build the docker
 docker build -t ai-service:0.0.1 .
-docker build -t ai-service:0.0.2 .
 
-2. Run the docker of Flask (with or without GPU)
-docker run -it --rm -v "/zhong/flask-xray/covid19:/app" -p 8051:5000 --name ai-svr1 ai-service:0.0.1
-docker run -it --rm --runtime=nvidia -v "/zhong/flask-xray/covid19:/app" -p 8051:5000 --name ai-svr1 ai-service:0.0.1
-docker run -it --rm -v "/zhong/flask-xray/covid19:/app" -p 8051:5000 --name ai-svr2 ai-service:0.0.2
+2. Run the docker of Flask 
+docker run -it --rm -v "/sds-arch-cert/model-serving-edu/covid19:/app" -p 8051:5000 --name ai-svr1 ai-service:0.0.1
 
-3. Start tensorflow serving dockers (with and without GPU) - Tensorflow serving:
-docker run -itd --rm -p 8511:8501 --mount type=bind,source=/zhong/flask-xray/covid19/covid19_models,target=/models/covid19 -e MODEL_NAME=covid19 --name tf-svg1 -t tensorflow/serving
-docker run -itd --rm  --runtime=nvidia -p 8521:8501 --mount type=bind,source=/zhong/flask-xray/covid19/covid19_models,target=/models/covid19 -e MODEL_NAME=covid19 --name tf-svg2 -t tensorflow/serving:latest-gpu
-
-
+3. Start tensorflow serving dockers  - Tensorflow serving:
+docker run -itd --rm -p 8511:8501 --mount type=bind,source=/sds-arch-cert/model-serving-edu/covid19/covid19_models,target=/models/covid19 -e MODEL_NAME=covid19 --name tf-svg1 -t tensorflow/serving
 
 
 -----------------------
