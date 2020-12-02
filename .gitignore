@@ -1,6 +1,3 @@
-ModelServing-edu/notebooks/notebooks/backup/*
-ModelServing-edu/notebooks/notebooks/Covid_M/*
-
 ModelServing-edu/covid19/static/result/*
 ModelServing-edu/covid19/static/source/*
 ModelServing-edu/covid19/test_images/*
@@ -11,16 +8,6 @@ ModelServing-edu/covid19/scripts/*.h5
 ModelServing-edu/covid19/covid19_models/1/variables/*
 covid19/models/*
 covid19/__pycache__/*
-
-ModelServing-edu/covid-fastapi/static/result/*
-ModelServing-edu/covid-fastapi/static/source/*
-ModelServing-edu/covid-fastapi/test_images/*
-ModelServing-edu/covid-fastapi/flask_server/*
-ModelServing-edu/covid-fastapi/covid19_models/2/variables/*
-ModelServing-edu/covid-fastapi/models/*
-ModelServing-edu/covid-fastapi/scripts/*.h5
-ModelServing-edu/covid-fastapi/covid19_models/1/variables/*
-
 
 # Editor directories and files
 .idea
