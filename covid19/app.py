@@ -129,19 +129,22 @@ class GradCAM:
 def generate_gradcam_heatmap(model, imagePath, filename):
     orignal = cv2.imread(imagePath)
     orig = cv2.cvtColor(orignal, cv2.COLOR_BGR2RGB)
-    resized = cv2.resize(orig, (224, 224))
+    resized = cv2.resize(orig, (256, 256))
+    dataXG = np.array(resized) / 255.0
     dataXG = np.expand_dims(dataXG, axis=0)
-    dataXG = np.array(resized) / 224.0
 
     preds = model.predict(dataXG)
     i = np.argmax(preds[0])
 
-    cam = GradCAM(model=model, classIdx=i, layerName='mixed10') #mixed9_1, conv2d_93, mixed10 conv2d_93 average_pooling2d_9 - find the last 4d shape
+    cam = GradCAM(model=model, classIdx=i,
+                  layerName='mixed10')  # mixed9_1, conv2d_93, mixed10 conv2d_93 average_pooling2d_9 - find the last 4d shape
+                  # layerName='resnet50v2')
     heatmap = cam.compute_heatmap(dataXG)
 
     # Old fashoined way to overlay a transparent heatmap onto original image, the same as above
     heatmapY = cv2.resize(heatmap, (orig.shape[1], orig.shape[0]))
-    heatmapY = cv2.applyColorMap(heatmapY, cv2.COLORMAP_OCEAN)  # COLORMAP_JET, COLORMAP_VIRIDIS, COLORMAP_HOT, COLORMAP_BONE, COLORMAP_OCEAN
+    heatmapY = cv2.applyColorMap(heatmapY,
+                                 cv2.COLORMAP_OCEAN)  # COLORMAP_JET, COLORMAP_VIRIDIS, COLORMAP_HOT, COLORMAP_BONE, COLORMAP_OCEAN
     imageY = cv2.addWeighted(heatmapY, 0.5, orignal, 1.0, 0)
 
 
@@ -231,12 +234,13 @@ def query():
 
             # detection covid
             try:
-                # prediction, prob, img_pred_name = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
-                prediction, prob, img_pred_name = covid_classifier_model2(img_path, filename)
-                #prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
+                prediction, prob, img_pred_name = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
+                # prediction, prob, img_pred_name = covid_classifier_model2(img_path, filename)
+                # prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
                 output_path = os.path.join(app.config['OUTPUT_FOLDER'], img_pred_name)
                 return render_template('index.html', prediction=prediction, confidence=prob, filename=image_name, xray_image=img_path, xray_image_with_heatmap=output_path)
-            except:
+            except Exception as e:
+                logging.warning(e)
                 return render_template('index.html', prediction='INCONCLUSIVE', confidence=0, filename=image_name, xray_image=img_path)
         else:
             return render_template('index.html', name='FILE NOT ALOWED', confidence=0, filename=image_name, xray_image=img_path)
