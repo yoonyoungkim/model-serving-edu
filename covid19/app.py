@@ -231,7 +231,8 @@ def query():
 
             # detection covid
             try:
-                prediction, prob, img_pred_name = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
+                # prediction, prob, img_pred_name = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
+                prediction, prob, img_pred_name = covid_classifier_model2(img_path, filename)
                 #prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
                 output_path = os.path.join(app.config['OUTPUT_FOLDER'], img_pred_name)
                 return render_template('index.html', prediction=prediction, confidence=prob, filename=image_name, xray_image=img_path, xray_image_with_heatmap=output_path)
@@ -243,38 +244,77 @@ def query():
 
 # Model 2 inference endpoint
 @app.route('/covid19/api/v1/predict/', methods=['GET', 'POST'])
-def covid_classifier_model2():
-
+def covid_classifier_model2(img_path, filename):
     # Decoding and pre-processing base64 image
-    img = imread(BytesIO(base64.b64decode(request.form['b64'])))
+    # img = imread(BytesIO(base64.b64decode(request.form['b64'])))
+    img = cv2.imread(img_path)
+    img_out = img
+    logging.warning(img_path)
+
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (224, 224))
-    img = image.img_to_array(img) / 224.
+    img = cv2.resize(img, (256, 256))
+    img = image.img_to_array(img) / 255.
     img = np.expand_dims(img, axis=0)
 
     # this line is added because of a bug in tf_serving(1.10.0-dev)
-    img = img.astype('float16')
+    # img = img.astype('float16')
 
     data = json.dumps({"signature_name": "serving_default",
                        "instances": img.tolist()})
 
+    logging.warning("****** start save json image *****")
+    with open("image_data.json", "w") as text_file:
+        text_file.write("%s" % data)
+    logging.warning("****** end Save Json image ****")
+
+    os.environ['NO_PROXY'] = os.environ['no_proxy'] = '127.0.0.1,localhost,.local'
+    requests.Session.trust_env = False
+
     #MODEL2_API_URL is tensorflow serving URL in another docker
     HEADERS = {'content-type': 'application/json'}
-    MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/2:predict'
+    MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/1:predict'
     CLASS_NAMES = ['Covid19', 'Normal_Lung', 'Pneumonia_Bacterial_Lung']
 
+    logging.warning("****** Tenserflow Serving Request  *****")
     json_response = requests.post(MODEL2_API_URL, data=data, headers=HEADERS)
-    prediction = json.loads(json_response.text)['predictions']
-    prediction = np.argmax(np.array(prediction), axis=1)[0]
-    prediction = CLASS_NAMES[prediction]
+    logging.warning("****** Tenserflow Serving Response  *****")
+    logging.warning(json_response)
+    logging.warning(json_response.text)
 
-    #return jsonify({'XRay-classfication': prediction})
-    return jsonify({"model_name": "Customised IncpetionV3",
-                    "X-Ray_Classification_Result": prediction,
-                    'X-Ray_Classfication_Raw_Result': json.loads(json_response.text)['predictions'], #json_response.text,
-                    #'Input_Image': 'InputFilename',
-                    #'Output_Heatmap': 'OutputFilenameWithHeatmap'
-                    })
+
+    # prediction = json.loads(json_response.text)['predictions']
+    # prediction = np.argmax(np.array(prediction), axis=1)[0]
+    # prediction = CLASS_NAMES[prediction]
+    #
+    # #return jsonify({'XRay-classfication': prediction})
+    # return jsonify({"model_name": "Customised IncpetionV3",
+    #                 "X-Ray_Classification_Result": prediction,
+    #                 'X-Ray_Classfication_Raw_Result': json.loads(json_response.text)['predictions'], #json_response.text,
+    #                 #'Input_Image': 'InputFilename',
+    #                 #'Output_Heatmap': 'OutputFilenameWithHeatmap'
+    #                 })
+
+    pred = json.loads(json_response.text)['predictions']
+    pred_neg = int(round(pred[0][1] * 100))
+    pred_pos = int(round(pred[0][0] * 100))
+
+    if np.argmax(pred, axis=1)[0] == 0:
+        prediction = 'Covid-19 POSITIVE'
+        prob = pred_pos
+    elif np.argmax(pred, axis=1)[0] == 2:
+        prediction = 'Covid-19 Negative; Bacterial Penumonia Positive'
+        prob = pred_pos
+    else:
+        prediction = 'Covid-19 Negative; Bacterial Penumonia Negative'
+        prob = pred_pos
+
+    img_pred_name = prediction + str(prob) + filename + '.png'  # prediction+'_Prob_'+str(prob)+'_Name_'+filename+'.png'
+    cv2.imwrite('static/result/' + img_pred_name, img_out)
+    cv2.imwrite('static/Image_Prediction.png', img_out)
+    print
+    return prediction, prob, img_pred_name
+
+
 
 # Model 2 inference endpoint
 @app.route('/covid19/api/v1/predict/heatmap', methods=['GET', 'POST'])
@@ -296,14 +336,14 @@ def covid_classifier_model2_heatmap():
     img = np.expand_dims(img, axis=0)
 
     # this line is added because of a bug in tf_serving(1.10.0-dev)
-    img = img.astype('float16')
+    # img = img.astype('float16')
 
     data = json.dumps({"signature_name": "serving_default",
                        "instances": img.tolist()})
 
     #MODEL2_API_URL is tensorflow serving URL in another docker
     HEADERS = {'content-type': 'application/json'}
-    MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/2:predict'
+    MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/1:predict'
     CLASS_NAMES = ['Covid19', 'Normal_Lung', 'Pneumonia_Bacterial_Lung']
 
     json_response = requests.post(MODEL2_API_URL, data=data, headers=HEADERS)
