@@ -12,11 +12,16 @@ docker run -itd --rm -p 8511:8501 --mount type=bind,source=/sds-arch-cert/model-
 -----------------------
 ## Run with Docker
 
-# 1. Build Docker image
+# 1. Build Docker image   
+```
 $ docker build -t medicalui .
+```
 
-# 2. Run!
+# 2. Run!   
+```
 $ docker run -it --rm -p 5000:5000 medicalui
+```
+
 
 Open http://localhost:5000 and wait till the webpage is loaded.
 
@@ -24,11 +29,16 @@ Open http://localhost:5000 and wait till the webpage is loaded.
 ## Local Installation
 
 # 1. Install Python packages
+```
 $ pip install -r requirements.txt
+```
+
 
 # 2. Run!
+```
 $ python app.py
 ```
+
 
 Open http://localhost:5000 and have fun. :smiley:
 
@@ -57,3 +67,12 @@ You can also use gunicorn instead of gevent
 $ gunicorn -b 127.0.0.1:5000 app:app
 ```
 ------------------------------------------------------------------------------
+
+### tenserflow/serving run container image   
+```
+$ docker run -t --rm -p 8511:8501 \
+-v "/Users/juseok.yun/PycharmProjects/model-serving-edu/covid19/covid:/models/covid19" \
+-e MODEL_NAME=covid19 \
+tensorflow/serving
+```
+
