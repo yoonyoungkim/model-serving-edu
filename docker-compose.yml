@@ -14,7 +14,7 @@ services:
       - 8511:8501 # tensorflow servring port
       - 8510:8500 # grpc port
     volumes:
-      - ./covid19/covid19_models:/models/covid19  # tf2 serving convention
+      - ./covid19/covid:/models/covid19  # tf2 serving convention
 
 #  tf2svg2:   # tf serving GPU
 #    #build:
@@ -56,16 +56,16 @@ services:
     volumes:
       - ./covid19:/app  # tf2 serving convention
 
-  fastapi:    # FastAPI with Uvicorn server for covid19 service web pages and APIs, with backend tensorflow servering
-    build:
-      context: ./covid-fastapi
-    image: ai-service-fastapi:0.2.0
-    hostname: fastapi
-    restart: on-failure
-    ports:
-      - 8056-8058:8000 # tensorflow servring port
-    volumes:
-      - ./covid-fastapi:/app  # tf2 serving convention
+#  fastapi:    # FastAPI with Uvicorn server for covid19 service web pages and APIs, with backend tensorflow servering
+#    build:
+#      context: ./covid-fastapi
+#    image: ai-service-fastapi:0.2.0
+#    hostname: fastapi
+#    restart: on-failure
+#    ports:
+#      - 8056-8058:8000 # tensorflow servring port
+#    volumes:
+#      - ./covid-fastapi:/app  # tf2 serving convention
 
 #  lb:
 #    build:

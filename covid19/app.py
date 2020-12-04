@@ -39,15 +39,15 @@ def test_rx_image_for_Covid19(model, imagePath, filename):
     img = cv2.imread(imagePath)
     img_out = img
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (224, 224))
+    img = cv2.resize(img, (256, 256))
     img = np.expand_dims(img, axis=0)
 
-    img = np.array(img) / 224.0
+    img = np.array(img) / 255.0
 
     pred = model.predict(img)
     pred_neg = int(round(pred[0][1]*100))
     pred_pos = int(round(pred[0][0]*100))
-    
+
     if np.argmax(pred, axis=1)[0] == 0:
         prediction = 'Covid-19 POSITIVE'
         prob = pred_pos
@@ -114,7 +114,7 @@ class GradCAM:
         (w, h) = (image.shape[2], image.shape[1])
         heatmap = cv2.resize(cam.numpy(), (w, h))
 
-        # normalize the heatmap 
+        # normalize the heatmap
         numer = heatmap - np.min(heatmap)
         denom = (heatmap.max() - heatmap.min()) + eps
         heatmap = numer / denom
@@ -141,7 +141,7 @@ def generate_gradcam_heatmap(model, imagePath, filename):
 
     # Old fashoined way to overlay a transparent heatmap onto original image, the same as above
     heatmapY = cv2.resize(heatmap, (orig.shape[1], orig.shape[0]))
-    heatmapY = cv2.applyColorMap(heatmapY, cv2.COLORMAP_OCEAN)  # COLORMAP_JET, COLORMAP_VIRIDIS, COLORMAP_HOT, COLORMAP_BONE, COLORMAP_OCEAN 
+    heatmapY = cv2.applyColorMap(heatmapY, cv2.COLORMAP_OCEAN)  # COLORMAP_JET, COLORMAP_VIRIDIS, COLORMAP_HOT, COLORMAP_BONE, COLORMAP_OCEAN
     imageY = cv2.addWeighted(heatmapY, 0.5, orignal, 1.0, 0)
 
 
@@ -164,8 +164,8 @@ def generate_gradcam_heatmap(model, imagePath, filename):
         file_pred = 'Normal'
         prob = pred_pos
 
-    
-    img_pred_name =  file_pred + '_' + str(prob) + '_' + filename +'.png'    
+
+    img_pred_name =  file_pred + '_' + str(prob) + '_' + filename +'.png'
     if (np.argmax(preds, axis=1)[0] == 0) and (pred_pos > 65):
         cv2.imwrite('static/result/'+img_pred_name, imageY )
     else:
@@ -173,7 +173,7 @@ def generate_gradcam_heatmap(model, imagePath, filename):
 
     cv2.imwrite('static/Image_Prediction.png', orignal )
     print
-    
+
     return prediction, prob, img_pred_name
 
 
@@ -182,7 +182,8 @@ UPLOAD_FOLDER = os.path.join('static', 'source')
 OUTPUT_FOLDER = os.path.join('static', 'result')
 ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg', 'PDF', 'PNG', 'JPG', 'JPEG'])
 
-covid_pneumo_model = load_model('./models/inceptionv3_saved.h5') #inceptionv3_saved.h5, covid_pneumo_model.h5
+# covid_pneumo_model = load_model('./models/inceptionv3_saved.h5') #inceptionv3_saved.h5, covid_pneumo_model.h5
+covid_pneumo_model = load_model('./models/inceptionv3.h5')
 
 app = Flask(__name__)
 CORS(app)
@@ -243,7 +244,7 @@ def query():
 # Model 2 inference endpoint
 @app.route('/covid19/api/v1/predict/', methods=['GET', 'POST'])
 def covid_classifier_model2():
-  
+
     # Decoding and pre-processing base64 image
     img = imread(BytesIO(base64.b64decode(request.form['b64'])))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -254,9 +255,9 @@ def covid_classifier_model2():
     # this line is added because of a bug in tf_serving(1.10.0-dev)
     img = img.astype('float16')
 
-    data = json.dumps({"signature_name": "serving_default", 
+    data = json.dumps({"signature_name": "serving_default",
                        "instances": img.tolist()})
-    
+
     #MODEL2_API_URL is tensorflow serving URL in another docker
     HEADERS = {'content-type': 'application/json'}
     MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/2:predict'
@@ -269,16 +270,16 @@ def covid_classifier_model2():
 
     #return jsonify({'XRay-classfication': prediction})
     return jsonify({"model_name": "Customised IncpetionV3",
-                    "X-Ray_Classification_Result": prediction, 
+                    "X-Ray_Classification_Result": prediction,
                     'X-Ray_Classfication_Raw_Result': json.loads(json_response.text)['predictions'], #json_response.text,
                     #'Input_Image': 'InputFilename',
-                    #'Output_Heatmap': 'OutputFilenameWithHeatmap' 
+                    #'Output_Heatmap': 'OutputFilenameWithHeatmap'
                     })
 
 # Model 2 inference endpoint
 @app.route('/covid19/api/v1/predict/heatmap', methods=['GET', 'POST'])
 def covid_classifier_model2_heatmap():
-  
+
     # Decoding and pre-processing base64 image
     img = imread(BytesIO(base64.b64decode(request.form['b64'])))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -287,7 +288,7 @@ def covid_classifier_model2_heatmap():
     filename = time.strftime( str(uuid.uuid4()) + "%Y%m%d-%H%M%S.png")
     img_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     cv2.imwrite(img_path, img)
-    
+
 
     # normalise it into 4d input per request by backend tf serving
     img = cv2.resize(img, (224, 224))
@@ -297,9 +298,9 @@ def covid_classifier_model2_heatmap():
     # this line is added because of a bug in tf_serving(1.10.0-dev)
     img = img.astype('float16')
 
-    data = json.dumps({"signature_name": "serving_default", 
+    data = json.dumps({"signature_name": "serving_default",
                        "instances": img.tolist()})
-    
+
     #MODEL2_API_URL is tensorflow serving URL in another docker
     HEADERS = {'content-type': 'application/json'}
     MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/2:predict'
@@ -320,10 +321,10 @@ def covid_classifier_model2_heatmap():
     #return jsonify({'XRay-classfication': prediction})
     return jsonify({"model_name": "Customised Incpetion V3",
                     "X-Ray_Classification_Result": pred,
-                    "X-Ray_Classification_Covid19_Probability": prob / 100, 
-                    'X-Ray_Classfication_Raw_Result': json.loads(json_response.text)['predictions'], 
+                    "X-Ray_Classification_Covid19_Probability": prob / 100,
+                    'X-Ray_Classfication_Raw_Result': json.loads(json_response.text)['predictions'],
                     'Input_Image': RESOURCE_URL_SOURCE + filename,
-                    'Output_Heatmap': RESOURCE_URL_RESULT + img_pred_name 
+                    'Output_Heatmap': RESOURCE_URL_RESULT + img_pred_name
                     })
 
 
