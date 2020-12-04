@@ -14,7 +14,8 @@ services:
       - 8511:8501 # tensorflow servring port
       - 8510:8500 # grpc port
     volumes:
-      - ./covid19/covid:/models/covid19  # tf2 serving convention
+#      - ./covid19/covid:/models/covid19  # tf2 serving convention
+      - ./covid19/head-base-covid:/models/covid19
 
 #  tf2svg2:   # tf serving GPU
 #    #build:

@@ -138,7 +138,7 @@ def generate_gradcam_heatmap(model, imagePath, filename):
 
     cam = GradCAM(model=model, classIdx=i,
                   layerName='mixed10')  # mixed9_1, conv2d_93, mixed10 conv2d_93 average_pooling2d_9 - find the last 4d shape
-                  # layerName='resnet50v2')
+
     heatmap = cam.compute_heatmap(dataXG)
 
     # Old fashoined way to overlay a transparent heatmap onto original image, the same as above
@@ -186,7 +186,8 @@ OUTPUT_FOLDER = os.path.join('static', 'result')
 ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg', 'PDF', 'PNG', 'JPG', 'JPEG'])
 
 # covid_pneumo_model = load_model('./models/inceptionv3_saved.h5') #inceptionv3_saved.h5, covid_pneumo_model.h5
-covid_pneumo_model = load_model('./models/inceptionv3.h5')
+# covid_pneumo_model = load_model('./models/inceptionv3.h5')
+covid_pneumo_model = load_model('./models/inceptionv3_base.h5')
 
 app = Flask(__name__)
 CORS(app)
@@ -234,9 +235,9 @@ def query():
 
             # detection covid
             try:
-                prediction, prob, img_pred_name = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
+                # prediction, prob, img_pred_name = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
                 # prediction, prob, img_pred_name = covid_classifier_model2(img_path, filename)
-                # prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
+                prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
                 output_path = os.path.join(app.config['OUTPUT_FOLDER'], img_pred_name)
                 return render_template('index.html', prediction=prediction, confidence=prob, filename=image_name, xray_image=img_path, xray_image_with_heatmap=output_path)
             except Exception as e:
