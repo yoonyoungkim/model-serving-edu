@@ -49,7 +49,7 @@ from fastapi.responses import JSONResponse
 #####Set logger for FastAPI
 # Initialize logging
 my_logger = logging.getLogger()
-my_logger.setLevel(logging.ERROR)
+my_logger.setLevel(logging.WARNING)
 
 
 def save_upload_file(upload_file: UploadFile, destination: Path) -> None:
@@ -85,10 +85,10 @@ def test_rx_image_for_Covid19(model, imagePath, filename):
     img = cv2.imread(imagePath)
     img_out = img
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (224, 224))
+    img = cv2.resize(img, (256, 256))
     img = np.expand_dims(img, axis=0)
 
-    img = np.array(img) / 224.0
+    img = np.array(img) / 255.0
 
     pred = model.predict(img)
     pred_neg = int(round(pred[0][1]*100))
@@ -175,14 +175,16 @@ class GradCAM:
 def generate_gradcam_heatmap(model, imagePath, filename):
     orignal = cv2.imread(imagePath)
     orig = cv2.cvtColor(orignal, cv2.COLOR_BGR2RGB)
-    resized = cv2.resize(orig, (224, 224))
+    resized = cv2.resize(orig, (256, 256))
+    dataXG = np.array(resized) / 255.0
     dataXG = np.expand_dims(dataXG, axis=0)
-    dataXG = np.array(resized) / 224.0
 
     preds = model.predict(dataXG)
     i = np.argmax(preds[0])
 
-    cam = GradCAM(model=model, classIdx=i, layerName='mixed10') #mixed9_1, conv2d_93, mixed10 conv2d_93 average_pooling2d_9 - find the last 4d shape
+    cam = GradCAM(model=model, classIdx=i,
+                  layerName='mixed10')  # mixed9_1, conv2d_93, mixed10 conv2d_93 average_pooling2d_9 - find the last 4d shape
+
     heatmap = cam.compute_heatmap(dataXG)
 
     # Old fashoined way to overlay a transparent heatmap onto original image, the same as above
@@ -224,12 +226,13 @@ def generate_gradcam_heatmap(model, imagePath, filename):
 
 
 
-
 UPLOAD_FOLDER = os.path.join('static', 'source')
 OUTPUT_FOLDER = os.path.join('static', 'result')
 ALLOWED_EXTENSIONS = set(['pdf', 'png', 'jpg', 'jpeg', 'PDF', 'PNG', 'JPG', 'JPEG'])
 
-covid_pneumo_model = load_model('./models/inceptionv3_saved.h5') #inceptionv3_saved.h5, covid_pneumo_model.h5
+# covid_pneumo_model = load_model('./models/inceptionv3_saved.h5') #inceptionv3_saved.h5, covid_pneumo_model.h5
+# covid_pneumo_model = load_model('./models/inceptionv3.h5')
+covid_pneumo_model = load_model('./models/inceptionv3_base.h5')
 
 ##################################
 #### Define the WSGI server here
@@ -340,14 +343,15 @@ async def query(request: Request, file: UploadFile = File(...)):
 
             # detection covid
             try:
-                #prediction, prob, img_pred_name = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
-                #prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
+                # prediction, prob, img_pred_name = test_rx_image_for_Covid19(covid_pneumo_model, img_path, filename)
                 prediction, prob, img_pred_name = covid_classifier_model2(img_path, filename)
+                #prediction, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
                 output_path = os.path.join(OUTPUT_FOLDER, img_pred_name)
                 #return render_template('index.html', prediction=prediction, confidence=prob, filename=image_name, xray_image=img_path, xray_image_with_heatmap=output_path)
                 return templates.TemplateResponse("index.html", {"request": request, "prediction": prediction, "confidence": prob, "filename": image_name, "xray_image": img_path, "xray_image_with_heatmap": output_path })
 
-            except:
+            except Exception as e:
+                logging.warning(e)
                 # return render_template('index.html', prediction='INCONCLUSIVE', confidence=0, filename=image_name, xray_image=img_path)
                 return templates.TemplateResponse("index.html", {"request": request, "prediction": "INCONCLUSIVE -- here?", "confidence": 0, "filename": image_name, "xray_image": img_path })
 
@@ -362,7 +366,7 @@ async def query(request: Request, file: UploadFile = File(...)):
 #### AI API - Model 2 inference endpoint
 ########################################
 @app.post('/covid19/api/v1/predict/')
-async def covid_classifier_model2(img_path, filename):
+def covid_classifier_model2(img_path, filename):
     img = cv2.imread(img_path)
     img_out = img
     logging.warning(img_path)
@@ -371,6 +375,8 @@ async def covid_classifier_model2(img_path, filename):
     img = cv2.resize(img, (256, 256))
     img = image.img_to_array(img) / 255.
     img = np.expand_dims(img, axis=0)
+
+    logging.warning("****covid_classifier_model2 call *****")
 
     # this line is added because of a bug in tf_serving(1.10.0-dev)
     # img = img.astype('float16')
@@ -432,6 +438,8 @@ async def covid_classifier_model2(img_path, filename):
     print
     return prediction, prob, img_pred_name
 
+
+
 # Model 2 inference endpoint with heatmap
 @app.post('/covid19/api/v1/predict/heatmap')
 async def covid_classifier_model2_heatmap(request: Request):
@@ -451,14 +459,14 @@ async def covid_classifier_model2_heatmap(request: Request):
     img = np.expand_dims(img, axis=0)
 
     # this line is added because of a bug in tf_serving(1.10.0-dev)
-    img = img.astype('float16')
+    # img = img.astype('float16')
 
     data = json.dumps({"signature_name": "serving_default",
                        "instances": img.tolist()})
 
     #MODEL2_API_URL is tensorflow serving URL in another docker
     HEADERS = {'content-type': 'application/json'}
-    MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/2:predict'
+    MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/1:predict'
     CLASS_NAMES = ['Covid19', 'Normal_Lung', 'Pneumonia_Bacterial_Lung']
 
     json_response = requests.post(MODEL2_API_URL, data=data, headers=HEADERS)
@@ -469,8 +477,8 @@ async def covid_classifier_model2_heatmap(request: Request):
     # calculate and save the result heatmap
     pred, prob, img_pred_name = generate_gradcam_heatmap(covid_pneumo_model, img_path, filename)
 
-    RESOURCE_URL_SOURCE = 'http://localhost:8056/static/source/'
-    RESOURCE_URL_RESULT = 'http://localhost:8056/static/result/'
+    RESOURCE_URL_SOURCE = 'http://localhost:8051/static/source/'
+    RESOURCE_URL_RESULT = 'http://localhost:8051/static/result/'
 
     return JSONResponse({"model_name": "Customised Incpetion V3",
                     "X-Ray_Classification_Result": pred,
@@ -491,8 +499,9 @@ async def covid_classifier_model2_heatmap(request: Request):
 
 #if __name__ == '__main__':
 #    http_server = WSGIServer(('0.0.0.0', 8000), app)
-#    http_server.serve_forever()
+#    http_server.serve_forever() aa
 
 
 if __name__ == '__main__':
-   app.run()
+   # app.run('0.0.0.0', 8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
