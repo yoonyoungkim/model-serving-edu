@@ -389,14 +389,14 @@ def covid_classifier_model2(img_path, filename):
         text_file.write("%s" % data)
     logging.warning("****** end Save Json image ****")
 
-    os.environ['NO_PROXY'] = os.environ['no_proxy'] = '127.0.0.1,localhost,.local'
+    os.environ['NO_PROXY'] = os.environ['no_proxy'] = '127.0.0.1,localhost,.local,35.226.65.129'
     requests.Session.trust_env = False
 
     #MODEL2_API_URL is tensorflow serving URL in another docker
     HEADERS = {'content-type': 'application/json', 
-                'Host': 'covid19.myspace.example.com'}
-    #MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/1:predict'
-    MODEL2_API_URL = 'http://34.70.85.251:32380/v1/models/covid19:predict'
+                'Host': 'covid-19.myspace.example.com'}
+    # MODEL2_API_URL = 'http://35.226.65.129:8511/v1/models/covid19/versions/1:predict'
+    MODEL2_API_URL = 'http://35.226.65.129:32380/v1/models/covid-19:predict'
     CLASS_NAMES = ['Covid19', 'Normal_Lung', 'Pneumonia_Bacterial_Lung']
 
     logging.warning("****** Tenserflow Serving Request  *****")
@@ -466,7 +466,7 @@ async def covid_classifier_model2_heatmap(request: Request):
 
     #MODEL2_API_URL is tensorflow serving URL in another docker
     HEADERS = {'content-type': 'application/json'}
-    MODEL2_API_URL = 'http://127.0.0.1:8511/v1/models/covid19/versions/1:predict'
+    MODEL2_API_URL = 'http://35.226.65.129:8511/v1/models/covid19/versions/1:predict'
     CLASS_NAMES = ['Covid19', 'Normal_Lung', 'Pneumonia_Bacterial_Lung']
 
     json_response = requests.post(MODEL2_API_URL, data=data, headers=HEADERS)
